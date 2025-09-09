@@ -23,6 +23,7 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include <stdio.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -57,6 +58,12 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+uint8_t tx_packet[2] = {0x01, 0x80};
+uint8_t rx_packet[3];
+uint16_t pot_val, min_pwm, max_pwm, pwm_val;
+
+HAL_StatusTypeDef spi_err_code;
 
 /* USER CODE END 0 */
 
@@ -104,18 +111,21 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	uint8_t tx_packet[3] = {0x01, 0x80, 0x00};
-	uint8_t rx_packet[3];
+
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(&hspi1, tx_packet, rx_packet, 3 * sizeof(uint8_t), 2);
+	spi_err_code = HAL_SPI_TransmitReceive(&hspi1, tx_packet, rx_packet, 3, 500);
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 
-	uint16_t pot_val = (rx_packet[1] << 8) + rx_packet[2];
-	uint16_t min_pwm = __HAL_TIM_GET_AUTORELOAD(&htim1) * 0.05;
-	uint16_t max_pwm = __HAL_TIM_GET_AUTORELOAD(&htim1) * 0.1;
-	uint16_t pwm_val = min_pwm + (max_pwm - min_pwm) * pot_val / ((1 << 10) - 1);
+	printf("SPI Error Code: %d", spi_err_code);
 
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, pwm_val);
+	if (spi_err_code == HAL_OK) {
+		pot_val = (rx_packet[1] << 8) | rx_packet[2];
+		min_pwm = __HAL_TIM_GET_AUTORELOAD(&htim1) * 0.05;
+		max_pwm = __HAL_TIM_GET_AUTORELOAD(&htim1) * 0.1;
+		pwm_val = min_pwm + (max_pwm - min_pwm) * pot_val / ((1 << 10) - 1);
+
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, pwm_val);
+	}
 
 	HAL_Delay(10);
   }
