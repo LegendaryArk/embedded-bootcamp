@@ -113,13 +113,13 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);
-	spi_err_code = HAL_SPI_TransmitReceive(&hspi1, tx_packet, rx_packet, 3, 500);
+	spi_err_code = HAL_SPI_TransmitReceive(&hspi1, tx_packet, rx_packet, sizeof(rx_packet), 500);
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 
 	printf("SPI Error Code: %d", spi_err_code);
 
 	if (spi_err_code == HAL_OK) {
-		pot_val = (rx_packet[1] << 8) | rx_packet[2];
+		pot_val = ((rx_packet[1] & 0x03) << 8) | rx_packet[2];
 		min_pwm = __HAL_TIM_GET_AUTORELOAD(&htim1) * 0.05;
 		max_pwm = __HAL_TIM_GET_AUTORELOAD(&htim1) * 0.1;
 		pwm_val = min_pwm + (max_pwm - min_pwm) * pot_val / ((1 << 10) - 1);
